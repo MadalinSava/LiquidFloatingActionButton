@@ -20,7 +20,7 @@ import QuartzCore
     optional func liquidFloatingActionButton(liquidFloatingActionButton: LiquidFloatingActionButton, didSelectItemAtIndex index: Int)
 }
 
-public enum LiquidFloatingActionButtonAnimateStyle : Int {
+@objc public enum LiquidFloatingActionButtonAnimateStyle : Int {
     case Up
     case Right
     case Left
