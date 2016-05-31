@@ -17,7 +17,9 @@ import QuartzCore
 
 @objc public protocol LiquidFloatingActionButtonDelegate {
     // selected method
-    optional func liquidFloatingActionButton(liquidFloatingActionButton: LiquidFloatingActionButton, didSelectItemAtIndex index: Int)
+	optional func liquidFloatingActionButton(liquidFloatingActionButton: LiquidFloatingActionButton, didSelectItemAtIndex index: Int)
+	optional func liquidFloatingActionButtonDidStartOpenAnimation(liquidFloatingActionButton: LiquidFloatingActionButton)
+	optional func liquidFloatingActionButtonDidEndCloseAnimation(liquidFloatingActionButton: LiquidFloatingActionButton)
 }
 
 @objc public enum LiquidFloatingActionButtonAnimateStyle : Int {
@@ -51,7 +53,7 @@ public class LiquidFloatingActionButton : UIView {
         get {
             return plusRotation == 0
         }
-    }
+	}
 
     @IBInspectable public var color: UIColor = UIColor(red: 82 / 255.0, green: 112 / 255.0, blue: 235 / 255.0, alpha: 1.0) {
         didSet {
@@ -62,7 +64,7 @@ public class LiquidFloatingActionButton : UIView {
     private let plusLayer   = CAShapeLayer()
     private let circleLayer = CAShapeLayer()
 
-    private var touching = false
+    public private(set) var touching = false
     private var plusRotation: CGFloat = 0
 
     private var baseView = CircleLiquidBaseView()
@@ -97,7 +99,9 @@ public class LiquidFloatingActionButton : UIView {
     }
 
     // open all cells
-    public func open() {
+	public func open() {
+		self.delegate?.liquidFloatingActionButtonDidStartOpenAnimation?(self);
+		
         // rotate plus icon
         self.plusLayer.addAnimation(plusKeyframe(true), forKey: "plusRot")
         self.plusRotation = CGFloat(M_PI * 0.25) // 45 degree
@@ -119,6 +123,8 @@ public class LiquidFloatingActionButton : UIView {
     
         self.baseView.close(cellArray())
         setNeedsDisplay()
+		
+		self.delegate?.liquidFloatingActionButtonDidEndCloseAnimation?(self);
     }
 
     // MARK: draw icon
@@ -185,7 +191,7 @@ public class LiquidFloatingActionButton : UIView {
         let anim = CAKeyframeAnimation(keyPath: "path")
         anim.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
         anim.values = paths.map { $0.CGPath }
-        anim.duration = 0.5
+        anim.duration = 0.2
         anim.removedOnCompletion = true
         anim.fillMode = kCAFillModeForwards
         anim.delegate = self
@@ -243,7 +249,7 @@ public class LiquidFloatingActionButton : UIView {
         if isClosed {
             open()
         } else {
-            close()
+			close()
         }
     }
     
@@ -279,8 +285,8 @@ class ActionBarBaseView : UIView {
 
 class CircleLiquidBaseView : ActionBarBaseView {
 
-    let openDuration: CGFloat  = 0.6
-    let closeDuration: CGFloat = 0.2
+    let openDuration: CGFloat  = 0.2
+    let closeDuration: CGFloat = 0.1
     let viscosity: CGFloat     = 0.65
     var animateStyle: LiquidFloatingActionButtonAnimateStyle = .Up
     var color: UIColor = UIColor(red: 82 / 255.0, green: 112 / 255.0, blue: 235 / 255.0, alpha: 1.0) {
