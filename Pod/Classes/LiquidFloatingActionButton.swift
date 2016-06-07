@@ -65,11 +65,13 @@ public class LiquidFloatingActionButton : UIView {
         }
 	}
 
-    @IBInspectable public var color: UIColor = UIColor(red: 82 / 255.0, green: 112 / 255.0, blue: 235 / 255.0, alpha: 1.0) {
-        didSet {
-            baseView.color = color
-        }
-    }
+    @IBInspectable public var buttonColor: UIColor = UIColor(red: 82 / 255.0, green: 112 / 255.0, blue: 235 / 255.0, alpha: 1.0)
+	
+	@IBInspectable public var iconColor: UIColor = UIColor(red: 82 / 255.0, green: 112 / 255.0, blue: 235 / 255.0, alpha: 1.0) {
+		didSet {
+			baseView.color = iconColor
+		}
+	}
 
     private let circleLayer = CAShapeLayer()
 
@@ -91,7 +93,7 @@ public class LiquidFloatingActionButton : UIView {
     }
 
     private func insertCell(cell: LiquidFloatingCell) {
-        cell.color  = self.color
+        cell.color  = self.iconColor
         cell.radius = self.frame.width * cellRadiusRatio
         cell.center = self.center.minus(self.frame.origin)
         cell.actionButton = self
@@ -157,9 +159,9 @@ public class LiquidFloatingActionButton : UIView {
         self.circleLayer.cornerRadius = self.frame.width * 0.5
         self.circleLayer.masksToBounds = true
         if touching && responsible {
-            self.circleLayer.backgroundColor = self.color.white(0.5).CGColor
+            self.circleLayer.backgroundColor = self.buttonColor.white(0.5).CGColor
         } else {
-            self.circleLayer.backgroundColor = self.color.CGColor
+            self.circleLayer.backgroundColor = self.buttonColor.CGColor
         }
     }
 	
@@ -293,10 +295,10 @@ class CircleLiquidBaseView : ActionBarBaseView {
         engine?.viscosity = viscosity
         self.bigEngine = SimpleCircleLiquidEngine(radiusThresh: radius, angleThresh: 0.55)
         bigEngine?.viscosity = viscosity
-        self.engine?.color = actionButton.color
-        self.bigEngine?.color = actionButton.color
+        self.engine?.color = actionButton.iconColor
+        self.bigEngine?.color = actionButton.iconColor
 
-        baseLiquid = LiquittableCircle(center: self.center.minus(self.frame.origin), radius: radius, color: actionButton.color)
+        baseLiquid = LiquittableCircle(center: self.center.minus(self.frame.origin), radius: radius, color: actionButton.iconColor)
         baseLiquid?.clipsToBounds = false
         baseLiquid?.layer.masksToBounds = false
         
@@ -455,6 +457,8 @@ public class LiquidFloatingCell : LiquittableCircle {
 
     // for implement responsible color
     private var originalColor: UIColor
+	
+	private var label: UILabel?
     
     public override var frame: CGRect {
         didSet {
@@ -474,20 +478,30 @@ public class LiquidFloatingCell : LiquittableCircle {
         setupView(view)
     }
     
-    public init(icon: UIImage) {
+	public init(icon: UIImage, label: UILabel) {
         self.originalColor = UIColor.clearColor()
         super.init()
-        setup(icon)
+		
+		self.label = label
+        setup(icon, label)
     }
 
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func setup(image: UIImage, tintColor: UIColor = UIColor.whiteColor()) {
+	func setup(image: UIImage, _ label: UILabel? = nil) {
         imageView.image = image.imageWithRenderingMode(UIImageRenderingMode.AlwaysTemplate)
-        imageView.tintColor = tintColor
+        imageView.tintColor = .whiteColor()
         setupView(imageView)
+		
+		if let label = label {
+			label.sizeToFit()
+			label.frame.origin.x = -label.frame.size.width - 8
+			label.textColor = .whiteColor()
+			label.alpha = 0
+			addSubview(label)
+		}
     }
     
     func setupView(view: UIView) {
@@ -495,10 +509,13 @@ public class LiquidFloatingCell : LiquittableCircle {
         addSubview(view)
         resizeSubviews()
     }
-    
-    private func resizeSubviews() {
+	
+	private func resizeSubviews() {
         let size = CGSize(width: frame.width * 0.5, height: frame.height * 0.5)
         imageView.frame = CGRect(x: frame.width - frame.width * internalRatio, y: frame.height - frame.height * internalRatio, width: size.width, height: size.height)
+		if let label = label where label.frame.size.height < self.frame.size.height {
+			label.frame.size.height = self.frame.size.height
+		}
     }
     
     func update(key: CGFloat, open: Bool) {
