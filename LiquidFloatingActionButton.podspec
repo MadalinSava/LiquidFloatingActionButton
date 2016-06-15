@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = "LiquidFloatingActionButton"
-  s.version          = "0.2.1"
+  s.version          = "0.2.2"
   s.summary          = "Material Design Floating Action Button in liquid state"
 
 # This description is used to generate tags and improve search results.

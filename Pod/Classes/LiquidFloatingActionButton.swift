@@ -21,6 +21,7 @@ import QuartzCore
 	optional func liquidFloatingActionButton(liquidFloatingActionButton: LiquidFloatingActionButton, didSelectItemAtIndex index: Int)
 	optional func liquidFloatingActionButtonDidStartOpenAnimation(liquidFloatingActionButton: LiquidFloatingActionButton)
 	optional func liquidFloatingActionButtonDidStartCloseAnimation(liquidFloatingActionButton: LiquidFloatingActionButton)
+	optional func liquidFloatingActionButtonDidEndCloseAnimation(liquidFloatingActionButton: LiquidFloatingActionButton)
 }
 
 @objc public enum LiquidFloatingActionButtonAnimateStyle : Int {
@@ -40,7 +41,16 @@ public class LiquidFloatingActionButton : UIView {
             baseView.animateStyle = animateStyle
         }
     }
-	public var animationDuration = 1.0
+	public var openAnimationDuration = 1.0 {
+		didSet {
+			baseView.openDuration = CGFloat(openAnimationDuration) - baseView.openDelay * CGFloat(dataSource!.numberOfCells(self))
+		}
+	}
+	public var closeAnimationDuration = 1.0 {
+		didSet {
+			baseView.closeDuration = CGFloat(closeAnimationDuration)
+		}
+	}
     public var enableShadow = true {
         didSet {
             setNeedsDisplay()
@@ -123,7 +133,7 @@ public class LiquidFloatingActionButton : UIView {
             insertCell(cell)
         }
 
-		self.rotateButton()
+		self.rotateButton(openAnimationDuration)
         self.baseView.open(cells)
 		
         setNeedsDisplay()
@@ -134,18 +144,24 @@ public class LiquidFloatingActionButton : UIView {
         // rotate button
         self.buttonRotation = 0
 		
-		self.rotateButton()
+		self.rotateButton(closeAnimationDuration)
         self.baseView.close(cellArray())
         setNeedsDisplay()
 		
 		self.delegate?.liquidFloatingActionButtonDidStartCloseAnimation?(self);
     }
 	
-	private func rotateButton() {
+	private func rotateButton(duration: NSTimeInterval) {
 		UIView.beginAnimations(nil, context: nil)
-		UIView.setAnimationDuration(self.animationDuration)
+		UIView.setAnimationDuration(duration)
 		liquidView.transform = CGAffineTransformMakeRotation(self.buttonRotation)
 		UIView.commitAnimations()
+	}
+	
+	func didStop() {
+		if isClosed {
+			delegate?.liquidFloatingActionButtonDidEndCloseAnimation?(self)
+		}
 	}
 
     // MARK: draw icon
@@ -218,6 +234,9 @@ public class LiquidFloatingActionButton : UIView {
 
         baseView.setup(self)
         addSubview(baseView)
+		
+		baseView.openDelay = 0.02
+		
         
         liquidView.frame = baseView.frame
         liquidView.userInteractionEnabled = false
@@ -266,8 +285,9 @@ class ActionBarBaseView : UIView {
 
 class CircleLiquidBaseView : ActionBarBaseView {
 
-    let openDuration: CGFloat  = 0.3
-    let closeDuration: CGFloat = 0.2
+    var openDuration: CGFloat  = 0.3
+    var closeDuration: CGFloat = 0.2
+	var openDelay: CGFloat = 0.05
     let viscosity: CGFloat     = 0.65
     var animateStyle: LiquidFloatingActionButtonAnimateStyle = .Up
     var color: UIColor = UIColor(red: 82 / 255.0, green: 112 / 255.0, blue: 235 / 255.0, alpha: 1.0) {
@@ -285,8 +305,10 @@ class CircleLiquidBaseView : ActionBarBaseView {
     private var openingCells: [LiquidFloatingCell] = []
     private var keyDuration: CGFloat = 0
     private var displayLink: CADisplayLink?
+	private weak var actionButton: LiquidFloatingActionButton?
 
     override func setup(actionButton: LiquidFloatingActionButton) {
+		self.actionButton = actionButton
         self.frame = actionButton.frame
         self.center = actionButton.center.minus(actionButton.frame.origin)
         self.animateStyle = actionButton.animateStyle
@@ -358,7 +380,10 @@ class CircleLiquidBaseView : ActionBarBaseView {
 
         if allRatio >= 1.0 {
             didFinishUpdate()
-            stop()
+			stop()
+			
+			actionButton?.didStop()
+			
             return
         }
 
@@ -384,17 +409,17 @@ class CircleLiquidBaseView : ActionBarBaseView {
     }
     
     func updateOpen() {
-        update(0.05, duration: openDuration) { cell, i, ratio in
+        update(openDelay, duration: openDuration) { cell, i, ratio in
             let posRatio = ratio > CGFloat(i) / CGFloat(self.openingCells.count) ? ratio : 0
-            let distance = (cell.frame.height * 0.5 + CGFloat(i + 1) * cell.frame.height * 1.5) * posRatio
+            let distance = (CGFloat(i + 1) * cell.frame.height * 1.5) * posRatio
             cell.center = self.center.plus(self.differencePoint(distance))
-            cell.update(ratio, open: true)
+            cell.update(posRatio, open: true)
         }
     }
     
     func updateClose() {
         update(0, duration: closeDuration) { cell, i, ratio in
-            let distance = (cell.frame.height * 0.5 + CGFloat(i + 1) * cell.frame.height * 1.5) * (1 - ratio)
+            let distance = (CGFloat(i + 1) * cell.frame.height * 1.5) * (1 - ratio)
             cell.center = self.center.plus(self.differencePoint(distance))
             cell.update(ratio, open: false)
         }
